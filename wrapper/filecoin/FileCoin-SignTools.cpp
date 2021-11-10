@@ -48,42 +48,14 @@ int GetSeedFromMnemonic(void** seed, const char* mnemonic, const char* mnemonicP
 
 char* GetSinglePrivateKey(const void* seed, int seedLen)
 {
-    if (!seed || seedLen <= 0) {
-        throw std::logic_error("Invalid parameter.");
-    }
-
-    const char* path = "m/44'/461'/0'/0/0";
-    auto fcError = MakeFileCoinError();
-
-    auto creater = [&]() -> char* {
-        auto ptr = elastos_filecoin_signer_get_privkey_from_seed((uint8_t*)seed, seedLen, path, fcError.get());
-        return ptr;
-    };
-    auto deleter = [=](char *ptr) -> void {
-        filecoin_signer_string_free(ptr);
-    };
-    auto fcPrivateKey = std::shared_ptr<char>(creater(), deleter);
-    if(fcPrivateKey.get() == nullptr || fcError->code != 0) {
-        printf("Failed filecoin-signer make private key: %s\n", fcError->message);
-        return nullptr;
-    }
-
-    // printf("%s ret=%s\n", __PRETTY_FUNCTION__, fcPrivateKey.get());
-    return strdup(fcPrivateKey.get());
+    const char* address_index="0";
+    return GetGenerateSubPrivateKey(seed, seedLen, address_index);
 }
 
 char* GetSinglePublicKey(const void* seed, int seedLen)
 {
-    if (!seed || seedLen <= 0) {
-        throw std::logic_error("Invalid parameter.");
-    }
-
-    char* privateKey = FileCoin::GetSinglePrivateKey(seed, seedLen);
-    char* publicKey = FileCoin::GetPublicKeyFromPrivateKey(privateKey);
-    free(privateKey);
-
-    // printf("%s ret=%s\n", __PRETTY_FUNCTION__, publicKey);
-    return publicKey;
+    const char* address_index="0";
+    return GetGenerateSubPublicKey(seed, seedLen, address_index);
 }
 
 char* GetPublicKeyFromPrivateKey(const char* privateKey)
@@ -295,6 +267,53 @@ static std::string base64Encode(const uint8_t* data, int size)
 
     BIO_free_all(b64);
     return ret;
+}
+
+char* GetGenerateSubPrivateKey(const void* seed, int seedLen, const char* address_index)
+{
+    if (!seed || seedLen <= 0 || address_index == NULL || strlen(address_index) < 1) {
+        throw std::logic_error("Invalid parameter.");
+    }
+
+    const char* coinType_chain = "m/44'/461'/0'/0/";
+
+    char * path = (char *) malloc(1 + strlen(coinType_chain)+ strlen(address_index));
+    path[strlen(coinType_chain)+ strlen(address_index)] = 0;
+    strcpy(path, coinType_chain);
+    strcat(path, address_index);
+    
+    auto fcError = MakeFileCoinError();
+
+    auto creater = [&]() -> char* {
+        auto ptr = elastos_filecoin_signer_get_privkey_from_seed((uint8_t*)seed, seedLen, path, fcError.get());
+        free(path);
+        return ptr;
+    };
+    auto deleter = [=](char *ptr) -> void {
+        filecoin_signer_string_free(ptr);
+    };
+    auto fcPrivateKey = std::shared_ptr<char>(creater(), deleter);
+    if(fcPrivateKey.get() == nullptr || fcError->code != 0) {
+        printf("Failed filecoin-signer make private key: %s\n", fcError->message);
+        return nullptr;
+    }
+
+    // printf("%s ret=%s\n", __PRETTY_FUNCTION__, fcPrivateKey.get());
+    return strdup(fcPrivateKey.get());
+}
+
+char* GetGenerateSubPublicKey(const void* seed, int seedLen, const char* address_index)
+{
+    if (!seed || seedLen <= 0) {
+        throw std::logic_error("Invalid parameter.");
+    }
+
+    char* privateKey = FileCoin::GetGenerateSubPrivateKey(seed, seedLen, address_index);
+    char* publicKey = FileCoin::GetPublicKeyFromPrivateKey(privateKey);
+    free(privateKey);
+
+    // printf("%s ret=%s\n", __PRETTY_FUNCTION__, publicKey);
+    return publicKey;
 }
 
 } // namespace FileCoin

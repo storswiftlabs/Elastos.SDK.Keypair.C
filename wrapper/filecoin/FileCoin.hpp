@@ -12,6 +12,8 @@ char* GetSinglePublicKey(const void* seed, int seedLen);
 char* GetPublicKeyFromPrivateKey(const char* privateKey);
 char* GetAddress(const char* publicKey);
 bool IsAddressValid(const char* address);
+char* GetGenerateSubPrivateKey(const void* seed, int seedLen, const char* address_index);
+char* GetGenerateSubPublicKey(const void* seed, int seedLen, const char* address_index);
 
 int Sign(const char* privateKey,
          const void* data, int len,
